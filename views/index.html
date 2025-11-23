@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>House Price Predictor</title>
+
+    <style>
+        body {
+            background: #f4f4f4;
+            font-family: Arial;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 430px;
+            margin: auto;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #4CAF50;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        h2, p {
+            text-align: center;
+        }
+        #result {
+            margin-top: 20px;
+            text-align: center;
+            padding: 12px;
+            display: none;
+            background: #e9ffe9;
+            border-radius: 8px;
+            font-size: 18px;
+            color: #2A7A2A;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h2>🏡 House Price Predictor</h2>
+    <p style="font-size: 13px; color: #777;">
+        This model is trained on the <b>California Housing Dataset</b>.<br>
+        Predictions work best for California cities only.
+    </p>
+
+    <input id="city" placeholder="Enter City Name (Example: San Francisco)">
+    <input id="housing_median_age" placeholder="House Median Age" type="number">
+    <input id="total_rooms" placeholder="Total Rooms" type="number">
+    <input id="total_bedrooms" placeholder="Total Bedrooms" type="number">
+    <input id="population" placeholder="Population" type="number">
+    <input id="households" placeholder="Households" type="number">
+    <input id="median_income" placeholder="Median Income" type="number" step="any">
+    <input id="ocean_proximity" placeholder="Ocean Proximity (0 = inland, 1-4 = near water)" type="number">
+
+    <button onclick="predictPrice()">Predict Price</button>
+
+    <div id="result"></div>
+</div>
+
+<script>
+// Get latitude & longitude from city name
+async function getCoordinates(city) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${city}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.length === 0) return null;
+
+    return {
+        latitude: parseFloat(data[0].lat),
+        longitude: parseFloat(data[0].lon)
+    };
+}
+
+// Predict using Flask API
+async function predictPrice() {
+    const city = document.getElementById("city").value;
+
+    // Get coordinates automatically
+    const coords = await getCoordinates(city);
+    if (!coords) {
+        alert("City not found. Please try a California city.");
+        return;
+    }
+
+    const data = {
+        longitude: coords.longitude,
+        latitude: coords.latitude,
+        housing_median_age: parseFloat(document.getElementById("housing_median_age").value),
+        total_rooms: parseFloat(document.getElementById("total_rooms").value),
+        total_bedrooms: parseFloat(document.getElementById("total_bedrooms").value),
+        population: parseFloat(document.getElementById("population").value),
+        households: parseFloat(document.getElementById("households").value),
+        median_income: parseFloat(document.getElementById("median_income").value),
+        ocean_proximity: parseInt(document.getElementById("ocean_proximity").value)
+    };
+
+    const response = await fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    const resBox = document.getElementById("result");
+    resBox.style.display = "block";
+    resBox.innerHTML = "Predicted House Price: <br><b>$" + result.predicted_price.toFixed(2) + "</b>";
+}
+</script>
+
+</body>
+</html>
